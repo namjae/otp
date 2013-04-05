@@ -1500,22 +1500,23 @@ check_args([]) ->
 %% Functions for communicating with a file io server.
 %% The messages sent have the following formats:
 %%
-%%	{file_request,From,ReplyAs,Request}
-%%	{file_reply,ReplyAs,Reply}
+%%	{file_request,Ref,From,ReplyAs,Request}
+%%	{file_reply,Ref,ReplyAs,Reply}
+%%
+%% The two functions are inlined to enable receive optimization.
+
+-compile({inline,[file_request/2,wait_file_reply/2]}).
 
 file_request(Io, Request) ->
     R = erlang:monitor(process, Io),
-    Io ! {file_request,self(),Io,Request},
+    Io ! {file_request,R,self(),Io,Request},
     R.
 
 wait_file_reply(From, Ref) ->
     receive
-	{file_reply,From,Reply} ->
-	    erlang:demonitor(Ref),
-	    receive {'DOWN', Ref, _, _, _} -> ok after 0 -> ok end,
-	    %% receive {'EXIT', From, _} -> ok after 0 -> ok end,
+	{file_reply,Ref,From,Reply} ->
+	    erlang:demonitor(Ref, [flush]),
 	    Reply;
 	{'DOWN', Ref, _, _, _} ->
-	    %% receive {'EXIT', From, _} -> ok after 0 -> ok end,
 	    {error, terminated}
     end.
