@@ -152,12 +152,12 @@ opt_recv(Is, Regs, D) ->
 opt_recv([{label,L}=Lbl,{loop_rec,{f,Fail},_}=Loop|Is], D, R0, _, Acc) ->
     R = regs_kill_not_live(0, R0),
     case regs_to_list(R) of
-	[{y,_}=RefReg] ->
-	    %% We now have the new reference in the Y register RefReg
+	[{y,_}|_] ->
+	    %% We now have the new reference in Y registers
 	    %% and the current instruction is the beginning of a
 	    %% receive statement. We must now verify that only messages
 	    %% that contain the reference will be matched.
-	    case opt_ref_used(Is, RefReg, Fail, D) of
+	    case opt_ref_used(Is, R, Fail, D) of
 		false ->
 		    no;
 		true ->
@@ -299,11 +299,9 @@ opt_ref_used_1([_I|_], _RefReg, _D, _Done, _Regs) ->
 %% is_ref_msg_comparison(Args, RefReg, RegisterSet) -> true|false.
 %%  Return 'true' if Args denotes a comparison between the
 %%  reference and message or part of the message.
-is_ref_msg_comparison([R,RefReg], RefReg, Regs) ->
-    regs_is_member(R, Regs);
-is_ref_msg_comparison([RefReg,R], RefReg, Regs) ->
-    regs_is_member(R, Regs);
-is_ref_msg_comparison([_,_], _, _) -> false.
+is_ref_msg_comparison([R1,R2], RefReg, Regs) ->
+    regs_is_member(R2, RefReg) andalso regs_is_member(R1, Regs) orelse
+    regs_is_member(R1, RefReg) andalso regs_is_member(R2, Regs).
 
 opt_ref_used_in_all([L|Ls], RefReg, D, Done0, Regs) ->
     Done = opt_ref_used_at(L, RefReg, D, Done0, Regs),
