@@ -160,18 +160,18 @@ valid_enc(_Other) ->
 
 server_loop(#state{mref = Mref} = State) ->
     receive
-	{file_request, From, ReplyAs, Request} when is_pid(From) ->
+	{file_request, Ref, From, ReplyAs, Request} when is_pid(From) ->
 	    case file_request(Request, State) of
 		{reply, Reply, NewState} ->
-		    file_reply(From, ReplyAs, Reply),
+		    file_reply(Ref, From, ReplyAs, Reply),
 		    server_loop(NewState);
 		{error, Reply, NewState} ->
 		    %% error is the same as reply, except that
 		    %% it breaks the io_request_loop further down
-		    file_reply(From, ReplyAs, Reply),
+		    file_reply(Ref, From, ReplyAs, Reply),
 		    server_loop(NewState);
 		{stop, Reason, Reply, _NewState} ->
-		    file_reply(From, ReplyAs, Reply),
+		    file_reply(Ref, From, ReplyAs, Reply),
 		    exit(Reason)
 	    end;
 	{io_request, From, ReplyAs, Request} when is_pid(From) ->
@@ -194,8 +194,8 @@ server_loop(#state{mref = Mref} = State) ->
 	    server_loop(State)
     end.
 
-file_reply(From, ReplyAs, Reply) ->
-    From ! {file_reply, ReplyAs, Reply}.
+file_reply(Ref, From, ReplyAs, Reply) ->
+    From ! {file_reply, Ref, ReplyAs, Reply}.
 
 io_reply(From, ReplyAs, Reply) ->
     From ! {io_reply, ReplyAs, Reply}.
